@@ -1,8 +1,31 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { motion } from 'framer-motion'
 
-// Lazy-load Spline to prevent blocking initial render and avoid runtime issues on devices without WebGL
-const Spline = lazy(() => import('@splinetool/react-spline'))
+// We dynamically import Spline at runtime to avoid breaking the app if WebGL or the module isn't available.
+function SplineLazy({ scene }) {
+  const [Comp, setComp] = useState(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    import('@splinetool/react-spline')
+      .then((m) => {
+        if (mounted) setComp(() => m.default)
+      })
+      .catch(() => {
+        if (mounted) setFailed(true)
+      })
+    return () => { mounted = false }
+  }, [])
+
+  if (failed || !Comp) return null
+  const Spline = Comp
+  return (
+    <Suspense fallback={null}>
+      <Spline scene={scene} />
+    </Suspense>
+  )
+}
 
 export default function Hero() {
   const [canRender3D, setCanRender3D] = useState(false)
@@ -25,12 +48,10 @@ export default function Hero() {
         {/* Decorative gradient backdrop */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.15),transparent_60%),radial-gradient(ellipse_at_bottom,rgba(59,130,246,0.2),transparent_60%)]" />
 
-        {/* 3D Spline scene (guarded + lazy) */}
+        {/* 3D Spline scene (guarded + dynamic import) */}
         {isClient && canRender3D && (
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] opacity-70">
-            <Suspense fallback={null}>
-              <Spline scene="https://prod.spline.design/2Qns5nMHvR1OAHyB/scene.splinecode" />
-            </Suspense>
+            <SplineLazy scene="https://prod.spline.design/2Qns5nMHvR1OAHyB/scene.splinecode" />
           </div>
         )}
       </div>
