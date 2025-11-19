@@ -1,16 +1,38 @@
-import Spline from '@splinetool/react-spline'
+import React, { useEffect, useState, Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
 
+// Lazy-load Spline to prevent blocking initial render and avoid runtime issues on devices without WebGL
+const Spline = lazy(() => import('@splinetool/react-spline'))
+
 export default function Hero() {
+  const [canRender3D, setCanRender3D] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    try {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      setCanRender3D(!!gl)
+    } catch {
+      setCanRender3D(false)
+    }
+  }, [])
+
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         {/* Decorative gradient backdrop */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.15),transparent_60%),radial-gradient(ellipse_at_bottom,rgba(59,130,246,0.2),transparent_60%)]" />
-        {/* 3D Spline scene (lightweight, decorative) */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] opacity-70">
-          <Spline scene="https://prod.spline.design/2Qns5nMHvR1OAHyB/scene.splinecode" />
-        </div>
+
+        {/* 3D Spline scene (guarded + lazy) */}
+        {isClient && canRender3D && (
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] opacity-70">
+            <Suspense fallback={null}>
+              <Spline scene="https://prod.spline.design/2Qns5nMHvR1OAHyB/scene.splinecode" />
+            </Suspense>
+          </div>
+        )}
       </div>
 
       <div className="relative container mx-auto px-6 pt-24 pb-16 md:pt-32 md:pb-24">
